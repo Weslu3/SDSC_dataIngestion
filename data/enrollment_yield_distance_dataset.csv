@@ -1,27 +1,27 @@
 geography_key,barangay_name,city,province,distance_km_from_campus,enrollment_yield
-41,Barangay 182,City of Caloocan,Metro Manila,0.25,7
-42,Barangay 183,City of Caloocan,Metro Manila,0.49,12
-40,Barangay 181,City of Caloocan,Metro Manila,0.63,34
-39,Barangay 180,City of Caloocan,Metro Manila,0.83,6
-44,Barangay 185,City of Caloocan,Metro Manila,1.14,15
-45,Barangay 186,City of Caloocan,Metro Manila,1.95,34
-46,Barangay 188,City of Caloocan,Metro Manila,2.8,5
-16,San Manuel,City of San Jose Del Monte,Bulacan,2.94,1
-37,Barangay 178,City of Caloocan,Metro Manila,2.96,5
-11,Tungkong Mangga,City of San Jose Del Monte,Bulacan,3.28,2
-14,Graceville,City of San Jose Del Monte,Bulacan,3.96,4
-34,Barangay 174,City of Caloocan,Metro Manila,3.97,6
-36,Barangay 177,City of Caloocan,Metro Manila,4.23,23
-75,Greater Lagro,Quezon City,Metro Manila,4.47,4
-35,Barangay 175,City of Caloocan,Metro Manila,4.48,8
-56,Fairview,Quezon City,Metro Manila,4.49,1
-57,Kaligayahan,Quezon City,Metro Manila,4.62,3
-62,Pasong Putik Proper,Quezon City,Metro Manila,4.94,12
-47,Barangay 176-A,City of Caloocan,Metro Manila,4.95,121
+41,Barangay 182,City of Caloocan,Metro Manila,0.25,21
+42,Barangay 183,City of Caloocan,Metro Manila,0.49,50
+40,Barangay 181,City of Caloocan,Metro Manila,0.63,110
+39,Barangay 180,City of Caloocan,Metro Manila,0.83,24
+44,Barangay 185,City of Caloocan,Metro Manila,1.14,69
+45,Barangay 186,City of Caloocan,Metro Manila,1.95,90
+46,Barangay 188,City of Caloocan,Metro Manila,2.8,28
+16,San Manuel,City of San Jose Del Monte,Bulacan,2.94,17
+37,Barangay 178,City of Caloocan,Metro Manila,2.96,30
+11,Tungkong Mangga,City of San Jose Del Monte,Bulacan,3.28,7
+14,Graceville,City of San Jose Del Monte,Bulacan,3.96,11
+34,Barangay 174,City of Caloocan,Metro Manila,3.97,24
+36,Barangay 177,City of Caloocan,Metro Manila,4.23,83
+75,Greater Lagro,Quezon City,Metro Manila,4.47,31
+35,Barangay 175,City of Caloocan,Metro Manila,4.48,44
+56,Fairview,Quezon City,Metro Manila,4.49,24
+57,Kaligayahan,Quezon City,Metro Manila,4.62,12
+62,Pasong Putik Proper,Quezon City,Metro Manila,4.94,39
+47,Barangay 176-A,City of Caloocan,Metro Manila,4.95,323
 32,Barangay 172,City of Caloocan,Metro Manila,5.07,1
-5,Gaya-gaya,City of San Jose Del Monte,Bulacan,5.19,4
+5,Gaya-gaya,City of San Jose Del Monte,Bulacan,5.19,18
 13,Francisco Homes-Mulawin,City of San Jose Del Monte,Bulacan,5.37,1
-33,Barangay 173,City of Caloocan,Metro Manila,5.58,68
+33,Barangay 173,City of Caloocan,Metro Manila,5.58,168
 76,North Fairview,Quezon City,Metro Manila,5.93,1
 69,Santa Monica,Quezon City,Metro Manila,6.15,3
 73,Payatas,Quezon City,Metro Manila,6.15,1

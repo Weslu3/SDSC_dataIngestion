@@ -1,2 +1,2 @@
 sample_size,spearman_rho,p_value,interpretation,significant_at_0.05
-74,-0.5231,2e-06,moderate negative,True
+74,-0.6737,0.0,strong negative,True

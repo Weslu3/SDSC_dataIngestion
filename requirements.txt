@@ -7,3 +7,6 @@ psycopg2-binary
 python-dotenv
 openpyxl
 geopy>=2.4.1
+requests
+rapidfuzz
+plotly

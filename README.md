@@ -1,4 +1,4 @@
-# 📊 SDSC Enrollment Analytics & Data Ingestion System
+# SDSC Enrollment Analytics & Data Ingestion System
 
 The operational front-end and orchestrator for the **SDSC Prescriptive Enrollment Growth Management System** (Capstone Project). 
 
@@ -6,7 +6,7 @@ This application provides an end-to-end Action Feedback Loop: allowing administr
 
 ---
 
-## 🏗️ Architecture & Pipeline Stages
+## Architecture & Pipeline Stages
 
 ```
    ┌───────────────────────────────────────────────────────────┐
@@ -51,7 +51,7 @@ This application provides an end-to-end Action Feedback Loop: allowing administr
 
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```
 SDSC_dataIngestion/
@@ -66,16 +66,47 @@ SDSC_dataIngestion/
 │   └── config.toml            # Streamlit server & telemetry configurations
 │
 ├── scripts/                   # Standalone analytical & validation engines
-│   ├── run_spearman_correlation.py    # Distance vs. Yield correlation
-│   ├── run_chisquare_cramersv.py      # City vs. Program association
-│   ├── run_holt_loocv_validation.py   # Holt's Linear LOOCV validation
-│   ├── run_ols_forecast.py            # 3-year OLS enrollment forecast
-│   ├── run_ols_loocv_validation.py    # OLS LOOCV cross-validation
-│   ├── run_topsis_barangay_ranking.py # TOPSIS recruitment target ranking
-│   ├── compute_distance_from_campus.py# Campus distance calculation
-│   ├── geocode_barangays.py           # Barangay geocoding utility
-│   ├── retry_failed_geocodes.py       # Geocoding retry tool
-│   └── generate_dummy_data.py         # Test dataset generation utility
+│   ├── db_utils.py            # Centralized database connection & query utilities
+│   │
+│   ├── 00_etl_utils/          # Pre-processing, geocoding & spatial calculations
+│   │   ├── datacleaning.py    # PSGC geocoding, address disambiguation & PII hashing
+│   │   ├── load_warehouse.py  # Medallion warehouse loader (Bronze & Silver & Fact)
+│   │   ├── compute_distance_from_campus.py
+│   │   ├── geocode_barangays.py
+│   │   ├── retry_failed_geocodes.py
+│   │   └── generate_dummy_data.py
+│   │
+│   ├── 01_descriptive/        # Descriptive analytics & historical distributions
+│   │   ├── desc_categorical_distribution.sql
+│   │   ├── desc_yoy_enrollment_trend.sql
+│   │   └── run_descriptive_analysis.py
+│   │
+│   ├── 02_diagnostic/         # Diagnostic correlation & statistical association
+│   │   ├── run_spearman_correlation.py
+│   │   └── run_chisquare_cramersv.py
+│   │
+│   ├── 03_predictive/         # Time series & regression forecasting engines
+│   │   ├── run_holt_forecast.py
+│   │   ├── run_holt_publish.py
+│   │   ├── run_holt_loocv_validation.py
+│   │   ├── run_holt_expanding_validation.py
+│   │   ├── run_holt_tuning.py
+│   │   ├── run_ols_forecast.py
+│   │   ├── run_ols_loocv_validation.py
+│   │   ├── run_ols_spec_b.py
+│   │   ├── run_ols_expanding_window.py
+│   │   ├── run_ols_leave_one_year_out.py
+│   │   └── run_ols_tuning.py
+│   │
+│   └── 04_prescriptive/       # Decision modeling, optimization & capacity planning
+│       ├── 01_presc_barangay_input.sql
+│       ├── 02_presc_facility_capacity.sql
+│       ├── 03_presc_program_capacity_input.sql
+│       ├── 04_presc_data_quality_register.sql
+│       ├── run_prescriptive_marts.py
+│       ├── run_topsis_barangay_ranking.py
+│       ├── run_topsis_course_demand.py
+│       └── run_ip_solver.py
 │
 └── data/                      # Dataset reference & test files
     ├── dummy_registrar_enrollment_2026_2027.xlsx
@@ -88,7 +119,7 @@ SDSC_dataIngestion/
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### 1. Clone & Setup Environment
 ```bash
@@ -132,7 +163,7 @@ Access the application at `http://localhost:8501`.
 
 ---
 
-## ☁️ Deployment (Streamlit Community Cloud)
+## Deployment (Streamlit Community Cloud)
 
 1. Push this repository to GitHub.
 2. Visit [share.streamlit.io](https://share.streamlit.io) and link your repository.
@@ -149,7 +180,7 @@ Access the application at `http://localhost:8501`.
 
 ---
 
-## 📊 Medallion Architecture Mapping
+## Medallion Architecture Mapping
 - **Bronze**: Raw ingested enrollment exports (`bronze.enrollment_master`).
 - **Silver**: Standardized dimensional entities (`silver.dim_geography`, `silver.dim_student`, `silver.fact_enrollment`).
 - **Gold**: Business-level analytical datasets & forecasts (`gold.desc_*`, `gold.pred_ols_forecast`, `gold.presc_topsis_barangay_rank`).
