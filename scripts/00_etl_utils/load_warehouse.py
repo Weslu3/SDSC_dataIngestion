@@ -428,6 +428,122 @@ def refresh_gold_pred_ols_dataset(conn, df: pd.DataFrame, period_map: Dict[Tuple
     return refreshed_count
 
 
+def load_auxiliary_sheets_from_workbook(conn, upload_file_path: str) -> None:
+    """
+    If the uploaded workbook contains auxiliary institutional sheets (Faculty, Facilities,
+    Inquiries, SSS), synchronize them into the database to keep all analytics layers updated.
+    """
+    if not os.path.isfile(upload_file_path) or not upload_file_path.lower().endswith((".xlsx", ".xls")):
+        return
+
+    try:
+        xls = pd.ExcelFile(upload_file_path)
+    except Exception as e:
+        log.warning("Could not inspect Excel sheets for auxiliary data: %s", e)
+        return
+
+    sheet_names_lower = {re.sub(r"[\s_]+", " ", s).strip().lower(): s for s in xls.sheet_names}
+
+    # 1. Faculty Roster
+    fac_sheet = None
+    for k, original_name in sheet_names_lower.items():
+        if "faculty" in k:
+            fac_sheet = original_name
+            break
+
+    if fac_sheet:
+        try:
+            fdf = pd.read_excel(upload_file_path, sheet_name=fac_sheet, header=3)
+            col_map = {re.sub(r"[\s_*]+", "", str(c)).upper(): c for c in fdf.columns}
+            id_col = col_map.get("EMPLOYEEID") or col_map.get("ID")
+            if id_col:
+                fdf = fdf.dropna(subset=[id_col])
+                fdf = fdf[fdf[id_col].astype(str).str.strip() != ""]
+                ln_col = col_map.get("LASTNAME") or col_map.get("SURNAME")
+                fn_col = col_map.get("FIRSTNAME")
+                mn_col = col_map.get("MIDDLENAME") or col_map.get("MI")
+                title_col = col_map.get("TITLE")
+                dept_col = col_map.get("DEPARTMENT")
+                stat_col = col_map.get("STATUS") or col_map.get("EMPLOYMENTSTATUS")
+                with conn.cursor() as cur:
+                    for _, row in fdf.iterrows():
+                        cur.execute(
+                            """
+                            INSERT INTO silver.faculty_cleaned (
+                                "EMPLOYEE_ID", "LAST_NAME", "FIRST_NAME", "MIDDLE_NAME",
+                                "TITLE", "DEPARTMENT", "STATUS", "AUDIT_FLAGS"
+                            ) VALUES (%s, %s, %s, %s, %s, %s, %s, 'UNIFIED_TEMPLATE_INGEST')
+                            ON CONFLICT ("EMPLOYEE_ID") DO UPDATE SET
+                                "LAST_NAME" = EXCLUDED."LAST_NAME",
+                                "FIRST_NAME" = EXCLUDED."FIRST_NAME",
+                                "MIDDLE_NAME" = EXCLUDED."MIDDLE_NAME",
+                                "TITLE" = EXCLUDED."TITLE",
+                                "DEPARTMENT" = EXCLUDED."DEPARTMENT",
+                                "STATUS" = EXCLUDED."STATUS";
+                            """,
+                            (
+                                str(row.get(id_col, "")),
+                                str(row.get(ln_col, "")) if ln_col else "",
+                                str(row.get(fn_col, "")) if fn_col else "",
+                                str(row.get(mn_col, "")) if mn_col and pd.notna(row.get(mn_col)) else None,
+                                str(row.get(title_col, "")) if title_col and pd.notna(row.get(title_col)) else None,
+                                str(row.get(dept_col, "")) if dept_col else "",
+                                str(row.get(stat_col, "Full-Time")) if stat_col else "Full-Time",
+                            ),
+                        )
+                conn.commit()
+                log.info("      [OK] silver.faculty_cleaned synchronized (%d rows from '%s')", len(fdf), fac_sheet)
+        except Exception as e:
+            log.warning("Could not synchronize faculty from sheet '%s': %s", fac_sheet, e)
+
+    # 2. Facilities & Rooms
+    room_sheet = None
+    for k, original_name in sheet_names_lower.items():
+        if "room" in k or "facilit" in k:
+            room_sheet = original_name
+            break
+
+    if room_sheet:
+        try:
+            rdf = pd.read_excel(upload_file_path, sheet_name=room_sheet, header=3)
+            col_map = {re.sub(r"[\s_*]+", "", str(c)).upper(): c for c in rdf.columns}
+            id_col = col_map.get("ROOMID") or col_map.get("ROOMNUMBER")
+            if id_col:
+                rdf = rdf.dropna(subset=[id_col])
+                rdf = rdf[rdf[id_col].astype(str).str.strip() != ""]
+                name_col = col_map.get("ROOMNAME") or col_map.get("ROOM")
+                floor_col = col_map.get("FLOOR")
+                type_col = col_map.get("ROOMTYPE") or col_map.get("TYPE")
+                cap_col = col_map.get("SEATINGCAPACITY") or col_map.get("CAPACITY")
+                with conn.cursor() as cur:
+                    for _, row in rdf.iterrows():
+                        floor_val = row.get(floor_col) if floor_col else None
+                        floor_int = int(floor_val) if pd.notna(floor_val) and str(floor_val).isdigit() else None
+                        cur.execute(
+                            """
+                            INSERT INTO bronze.facilities (
+                                "ROOM_ID", "ROOM", "FLOOR", "TYPE", "SEATING_CAPACITY"
+                            ) VALUES (%s, %s, %s, %s, %s)
+                            ON CONFLICT ("ROOM_ID") DO UPDATE SET
+                                "ROOM" = EXCLUDED."ROOM",
+                                "FLOOR" = EXCLUDED."FLOOR",
+                                "TYPE" = EXCLUDED."TYPE",
+                                "SEATING_CAPACITY" = EXCLUDED."SEATING_CAPACITY";
+                            """,
+                            (
+                                str(row.get(id_col, "")),
+                                str(row.get(name_col, "")) if name_col else "",
+                                floor_int,
+                                str(row.get(type_col, "Classroom")) if type_col else "Classroom",
+                                str(row.get(cap_col, "30")) if cap_col else "30",
+                            ),
+                        )
+                conn.commit()
+                log.info("      [OK] bronze.facilities synchronized (%d rows from '%s')", len(rdf), room_sheet)
+        except Exception as e:
+            log.warning("Could not synchronize facilities from sheet '%s': %s", room_sheet, e)
+
+
 def run_load_warehouse(input_file: Optional[Path] = None) -> int:
     file_path = input_file
     if not file_path:
@@ -461,6 +577,11 @@ def run_load_warehouse(input_file: Optional[Path] = None) -> int:
 
         # 4. Gold Maintenance
         refresh_gold_pred_ols_dataset(conn, df, period_map)
+
+        # 5. Optional Auxiliary Master Data from Unified Workbook
+        upload_path = os.environ.get("SDSC_UPLOAD_PATH")
+        if upload_path and os.path.isfile(upload_path):
+            load_auxiliary_sheets_from_workbook(conn, upload_path)
 
         print("=" * 70)
         print("WAREHOUSE LOAD COMPLETE:")

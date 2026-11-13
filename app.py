@@ -364,17 +364,32 @@ if page == "Run Pipeline":
         <div class="sdsc-card">
             <div class="sdsc-card-title">Annual Data Ingestion</div>
             <div class="sdsc-card-subtitle">
-                Upload the registrar's enrollment export for the new academic year.
+                Upload the registrar's enrollment export or the unified institutional data workbook for the new academic year.
                 This will run the full analytics pipeline end-to-end and update every table the Power BI dashboard reads from.
             </div>
         """,
         unsafe_allow_html=True,
     )
 
+    template_path = os.path.join(os.path.dirname(__file__), "templates", "SDSC_Integrated_Institutional_Data_Template.xlsx")
+    if not os.path.exists(template_path):
+        template_path = os.path.join(os.path.dirname(__file__), "data", "SDSC_Integrated_Institutional_Data_Template.xlsx")
+
+    if os.path.exists(template_path):
+        with open(template_path, "rb") as f:
+            template_bytes = f.read()
+        st.download_button(
+            label="Download Master Data Template (.xlsx)",
+            data=template_bytes,
+            file_name="SDSC_Integrated_Institutional_Data_Template.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            help="Download the unified Excel template with pre-configured dropdowns and sheets for Enrollment, Faculty, Facilities, Inquiries, and Survey data.",
+        )
+
     uploaded_file = st.file_uploader(
         "Registrar Excel export (.xlsx)",
         type=["xlsx"],
-        help="Same format as the historical export used to build this system.",
+        help="Upload the filled SDSC Master Data Template or the standard registrar export.",
     )
 
     academic_year_label = st.text_input(

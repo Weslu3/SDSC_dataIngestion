@@ -273,23 +273,30 @@ def load_address_aliases(path: str) -> List[AliasRule]:
 
 
 COLUMN_ALIASES: Dict[str, List[str]] = {
-    "YEAR_LEVEL": ["YR. LEVEL", "YR LEVEL", "YEAR LEVEL", "YR.LEVEL", "YEAR_LEVEL"],
-    "LAST_NAME": ["SURNAME", "LAST NAME", "LASTNAME", "LAST_NAME"],
-    "FIRST_NAME": ["FIRSTNAME", "FIRST NAME", "FIRST_NAME"],
+    "STUDENT_ID": [
+        "STUDENT ID", "STUDENT_ID", "STUDENT NO", "STUDENT NO.", "STUDENT_NO",
+        "ID NUMBER", "ID_NUMBER", "ID", "STUDENT NUMBER", "STUDENT_NUMBER", "ROW_ID", "ROW ID",
+    ],
+    "YEAR_LEVEL": ["YR. LEVEL", "YR LEVEL", "YEAR LEVEL", "YR.LEVEL", "YEAR_LEVEL", "YEAR"],
+    "LAST_NAME": ["SURNAME", "LAST NAME", "LASTNAME", "LAST_NAME", "FAMILY NAME", "FAMILY_NAME"],
+    "FIRST_NAME": ["FIRSTNAME", "FIRST NAME", "FIRST_NAME", "GIVEN NAME", "GIVEN_NAME"],
     "MIDDLE_INITIAL": ["M.I", "M.I.", "MI", "MIDDLE INITIAL", "MIDDLE_INITIAL"],
     "MIDDLE_NAME": ["MIDDLE NAME", "MIDDLENAME", "MIDDLE_NAME"],
     "GENDER": ["GENDER", "SEX"],
-    "CITIZENSHIP": ["CITIZENSHIP", "CITIZEN"],
-    "BIRTH_DATE": ["BIRTH DATE", "BIRTHDATE", "DATE OF BIRTH", "BIRTHDAY", "BIRTH_DATE", "DOB", "ENROLLMENT_DATE", "ENROLLMENT DATE"],
-    "RAW_ADDRESS": ["ADDRESS", "HOME ADDRESS", "CURRENT ADDRESS", "STREET_ADDRESS", "STREET ADDRESS", "RAW_ADDRESS"],
-    "CONTACT_NO": ["CONTACT NO.", "CONTACT NO", "CONTACT NUMBER", "CONTACT #", "CONTACT_NO", "CONTACT_NUMBER"],
-    "ENROLLMENT_STATUS": ["REMARKS", "STATUS", "ENROLLMENT STATUS", "ENROLLMENT_STATUS"],
+    "CITIZENSHIP": ["CITIZENSHIP", "CITIZEN", "NATIONALITY"],
+    "BIRTH_DATE": ["BIRTH DATE", "BIRTHDATE", "DATE OF BIRTH", "BIRTHDAY", "BIRTH_DATE", "DOB", "DATE_OF_BIRTH"],
+    "ENROLLMENT_DATE": ["ENROLLMENT DATE", "ENROLLMENT_DATE", "DATE ENROLLED", "DATE_ENROLLED", "REGISTRATION_DATE"],
+    "RAW_ADDRESS": ["ADDRESS", "HOME ADDRESS", "CURRENT ADDRESS", "STREET_ADDRESS", "STREET ADDRESS", "RAW_ADDRESS", "FULL_ADDRESS"],
+    "CONTACT_NO": ["CONTACT NO.", "CONTACT NO", "CONTACT NUMBER", "CONTACT #", "CONTACT_NO", "CONTACT_NUMBER", "MOBILE", "MOBILE NO", "PHONE", "PHONE NUMBER"],
+    "EMAIL": ["EMAIL", "EMAIL ADDRESS", "EMAIL_ADDRESS", "STUDENT_EMAIL"],
+    "ENROLLMENT_STATUS": ["REMARKS", "STATUS", "ENROLLMENT STATUS", "ENROLLMENT_STATUS", "REGISTRATION_STATUS"],
     "PROGRAM": ["DEGREE PROGRAM", "DEGREE_PROGRAM", "PROGRAM", "COURSE", "ACADEMIC PROGRAM", "ACADEMIC_PROGRAM"],
     "MAJOR": ["MAJOR", "SPECIALIZATION"],
-    "BARANGAY": ["BARANGAY", "BRGY", "BGY"],
-    "CITY": ["CITY", "MUNICIPALITY", "CITY_MUNICIPALITY", "CITY/MUNICIPALITY", "CITY MUNICIPALITY"],
-    "PROVINCE": ["PROVINCE"],
+    "BARANGAY": ["BARANGAY", "BRGY", "BGY", "BARANGAY_NAME"],
+    "CITY": ["CITY", "MUNICIPALITY", "CITY_MUNICIPALITY", "CITY/MUNICIPALITY", "CITY MUNICIPALITY", "CITY_NAME"],
+    "PROVINCE": ["PROVINCE", "PROVINCE_NAME"],
     "REGION": ["REGION"],
+    "ZIP_CODE": ["ZIP CODE", "ZIP_CODE", "ZIP", "POSTAL CODE", "POSTAL_CODE"],
     "ACADEMIC_YEAR": ["ACADEMIC YEAR", "ACADEMIC_YEAR", "AY", "SCHOOL YEAR", "SCHOOL_YEAR"],
     "SEMESTER": ["SEMESTER", "SEM", "TERM"],
 }
@@ -971,18 +978,21 @@ def parse_filename_metadata(filepath: str) -> Tuple[str, str]:
 def find_header_row(raw_df: pd.DataFrame) -> Optional[int]:
     scan_rows = min(MAX_HEADER_SCAN_ROWS, len(raw_df))
     for i in range(scan_rows):
-        row_vals = [str(v).upper().replace("_", " ").strip() for v in raw_df.iloc[i].tolist()]
+        row_vals = [re.sub(r"\s+", " ", str(v).upper().replace("_", " ").replace("*", "")).strip() for v in raw_df.iloc[i].tolist()]
         if any(("SURNAME" in v) or ("LAST NAME" in v) for v in row_vals):
             return i
     return None
 
 
 def map_columns(columns: List[object]) -> Dict[str, object]:
-    upper_cols = [str(c).upper().replace("_", " ").strip() for c in columns]
+    def _norm(val: object) -> str:
+        s = str(val).upper().replace("_", " ").replace("*", "").strip()
+        return re.sub(r"\s+", " ", s)
+    upper_cols = [_norm(c) for c in columns]
     mapping: Dict[str, object] = {}
     for target, aliases in COLUMN_ALIASES.items():
         for alias in aliases:
-            norm_alias = alias.upper().replace("_", " ").strip()
+            norm_alias = _norm(alias)
             if norm_alias in upper_cols:
                 mapping[target] = columns[upper_cols.index(norm_alias)]
                 break
@@ -1005,7 +1015,22 @@ def read_enrollment_workbook(filepath: str, override_ay: Optional[str] = None) -
     xls = pd.ExcelFile(filepath)
     all_rows: List[pd.DataFrame] = []
 
+    NON_ENROLLMENT_SHEETS = {
+        "instructions & guide", "instructions", "guide", "readme",
+        "lookup_references", "lookups", "reference_lists", "references", "reference",
+        "faculty_roster", "faculty", "teaching_faculty",
+        "facilities_rooms", "facilities", "rooms", "campus_facilities",
+        "admissions_inquiries", "inquiries", "prospects",
+        "student_satisfaction", "survey_responses", "survey", "sss",
+        "alumni",
+    }
+
     for sheet_name in xls.sheet_names:
+        norm_sheet = re.sub(r"[\s_]+", " ", sheet_name).strip().lower()
+        if norm_sheet in NON_ENROLLMENT_SHEETS or "instruction" in norm_sheet or "reference" in norm_sheet or "faculty" in norm_sheet or "room" in norm_sheet or "inquir" in norm_sheet or "survey" in norm_sheet or "satisfaction" in norm_sheet:
+            log.info("  [%s] sheet '%s': recognized as administrative/auxiliary sheet, skipping enrollment extraction", filepath, sheet_name)
+            continue
+
         raw_df = pd.read_excel(filepath, sheet_name=sheet_name, header=None)
         header_row_idx = find_header_row(raw_df)
         if header_row_idx is None:
@@ -1107,7 +1132,10 @@ def transform_dataset(
         row_id = f"EM{row_num:06d}"
         audit_flags: List[str] = []
 
-        birth_date, bd_flag = clean_birthdate(row.get("BIRTH_DATE"))
+        birth_val = row.get("BIRTH_DATE")
+        if pd.isna(birth_val) or str(birth_val).strip() in ("", "nan", "<NA>", "None"):
+            birth_val = row.get("ENROLLMENT_DATE")
+        birth_date, bd_flag = clean_birthdate(birth_val)
         if bd_flag:
             audit_flags.append(bd_flag)
 
