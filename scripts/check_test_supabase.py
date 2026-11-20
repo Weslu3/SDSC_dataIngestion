@@ -86,28 +86,28 @@ def main():
             conn.rollback()
             print(f"    - {tbl:<30}: ERROR ({e})")
 
-    # 3. Gold Check
-    print("\n[3] GOLD SCHEMA (Analytics & Optimization Marts)")
-    gold_queries = [
-        ("gold.desc_categorical_distribution", "Category Distributions", "SELECT COUNT(*), MAX(generated_at) FROM gold.desc_categorical_distribution;"),
+    # 3. Analytics & Marts Check
+    print("\n[3] ANALYTICS & OPTIMIZATION MARTS (Gold & Public Schemas)")
+    mart_queries = [
+        ("public.desc_categorical_distribution", "Category Distributions", "SELECT COUNT(*), MAX(generated_at) FROM public.desc_categorical_distribution;"),
         ("gold.desc_yoy_enrollment_trend", "YoY Trend Calculations", "SELECT COUNT(*), MAX(computed_at) FROM gold.desc_yoy_enrollment_trend;"),
         ("gold.desc_distance_yield_correlation", "Diagnostic Spearman Run", "SELECT COUNT(*), MAX(generated_at) FROM gold.desc_distance_yield_correlation;"),
         ("gold.desc_city_program_association", "Diagnostic Chi-Square Run", "SELECT COUNT(*), MAX(generated_at) FROM gold.desc_city_program_association;"),
         ("gold.pred_holt_forecast", "Holt's Linear Projections", "SELECT COUNT(*), MAX(run_timestamp) FROM gold.pred_holt_forecast;"),
-        ("gold.pred_ols_forecast", "OLS Regression Forecasts", "SELECT COUNT(*), MAX(generated_at) FROM gold.pred_ols_forecast;"),
-        ("gold.presc_topsis_barangay_rank", "TOPSIS Barangay Rankings", "SELECT COUNT(*), MAX(generated_at) FROM gold.presc_topsis_barangay_rank;"),
+        ("public.pred_ols_forecast", "OLS Regression Forecasts", "SELECT COUNT(*), NULL FROM public.pred_ols_forecast;"),
+        ("public.presc_topsis_barangay_rank", "TOPSIS Barangay Rankings", "SELECT COUNT(*), NULL FROM public.presc_topsis_barangay_rank;"),
         ("gold.presc_ip_quota", "IP Quota Allocations", "SELECT COUNT(*), MAX(computed_at) FROM gold.presc_ip_quota;"),
     ]
-    for tbl, label, sql in gold_queries:
+    for tbl, label, sql in mart_queries:
         try:
             cur.execute(sql)
             res = cur.fetchone()
             cnt = res[0]
-            ts = res[1].strftime("%Y-%m-%d %H:%M") if res and res[1] else "No timestamp"
-            print(f"    - {tbl:<36}: {cnt:>5} rows | Last refreshed: {ts}")
+            ts = res[1].strftime("%Y-%m-%d %H:%M") if res and res[1] else "Populated" if cnt > 0 else "Empty"
+            print(f"    - {tbl:<38}: {cnt:>5} rows | Status/Timestamp: {ts}")
         except Exception as e:
             conn.rollback()
-            print(f"    - {tbl:<36}: ERROR ({e})")
+            print(f"    - {tbl:<38}: ERROR ({e})")
 
     # 4. Recent Breakdown by Academic Period
     print("\n[4] ENROLLMENT BREAKDOWN BY ACADEMIC PERIOD")
